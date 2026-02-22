@@ -1,6 +1,4 @@
 import streamlit as st
-import streamlit as st
-st.title("🚀 THIS IS DEFINITELY APP2 🚀")
 import joblib
 import pandas as pd
 import numpy as np
