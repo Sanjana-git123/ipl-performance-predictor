@@ -9,8 +9,29 @@ import numpy as np
 st.set_page_config(
     page_title="IPL Performance Predictor",
     page_icon="🏏",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+st.markdown("""
+    <style>
+        .main {
+            background-color: #0E1117;
+        }
+        .stMetric {
+            background-color: #1E222B;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #2A2E39;
+        }
+        .block-container {
+            padding-top: 2rem;
+        }
+        h1, h2, h3 {
+            color: #F0F2F6;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # -----------------------------
 # LOAD MODEL & DATA
@@ -90,6 +111,12 @@ if st.sidebar.button("Predict Performance"):
         st.markdown(
             f"### 🎯 Expected Runs (2026): **{int(predicted_runs)} ± {int(std_dev)}**"
         )
+
+        if predicted_runs > current_runs:
+            st.success("Model predicts improvement based on historical trends and match conditions.")
+        else:
+            st.warning("Model suggests potential decline based on performance patterns.")
+
 
         # -----------------------------
         # FEATURE IMPORTANCE
