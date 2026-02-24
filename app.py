@@ -6,7 +6,12 @@ import numpy as np
 import plotly.graph_objects as go
 import base64
 import os
+from streamlit_autorefresh import st_autorefresh
 
+# =====================================================
+# AUTO REFRESH (30 seconds)
+# =====================================================
+st_autorefresh(interval=30000, key="ipl_refresh")
 # =====================================================
 # RAPID API CONFIG
 # =====================================================
@@ -14,25 +19,45 @@ RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 
 RAPID_API_HOST = "cricket-live-line-advance.p.rapidapi.com"
 
+HEADERS = {
+    "X-RapidAPI-Key": RAPID_API_KEY,
+    "X-RapidAPI-Host": RAPID_API_HOST
+}
+
+# =====================================================
+# FETCH LIVE MATCHES (STEP 1)
+# =====================================================
+@st.cache_data(ttl=60)
+def fetch_live_matches():
+    if not RAPID_API_KEY:
+        return None
+
+    url = f"https://{RAPID_API_HOST}/matchesList"
+    response = requests.get(url, headers=HEADERS)
+
+    if response.status_code != 200:
+        return None
+
+    return response.json()
+
+# =====================================================
+# FETCH MATCH INNINGS DATA (STEP 2)
+# =====================================================
 def fetch_match_data(match_id):
     if not RAPID_API_KEY:
         return None
 
     url = f"https://{RAPID_API_HOST}/match/{match_id}/innings"
-
-    headers = {
-        "X-RapidAPI-Key": RAPID_API_KEY,
-        "X-RapidAPI-Host": RAPID_API_HOST
-    }
-
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=HEADERS)
 
     if response.status_code != 200:
-        st.error(f"API Error: {response.status_code}")
         return None
 
     return response.json()
 
+# =====================================================
+# EXTRACT LIVE PLAYER RUNS
+# =====================================================
 def extract_player_live_runs(api_json, player_name):
     if not api_json:
         return None
@@ -40,7 +65,6 @@ def extract_player_live_runs(api_json, player_name):
     players = api_json["response"].get("players", [])
     innings = api_json["response"].get("innings", [])
 
-    # Map player_id → name
     player_map = {p["player_id"]: p["name"] for p in players}
 
     for inning in innings:
@@ -52,6 +76,41 @@ def extract_player_live_runs(api_json, player_name):
                 return fow["runs"]
 
     return None
+
+# =====================================================
+# WORM GRAPH
+# =====================================================
+def plot_worm_graph(api_data):
+    if not api_data:
+        return
+
+    innings = api_data["response"].get("innings", [])
+
+    fig = go.Figure()
+
+    for inning in innings:
+        worm = inning.get("statistics", {}).get("worm", [])
+        if not worm:
+            continue
+
+        overs = [point["over"] for point in worm]
+        runs = [point["runs"] for point in worm]
+
+        fig.add_trace(go.Scatter(
+            x=overs,
+            y=runs,
+            mode="lines+markers",
+            name=inning.get("name", "Inning")
+        ))
+
+    fig.update_layout(
+        template="plotly_dark",
+        title="Live Worm Graph",
+        xaxis_title="Overs",
+        yaxis_title="Runs"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
 # PAGE CONFIG
@@ -210,21 +269,6 @@ player_list = sorted(data["Player_Name"].unique())
 selected_player = st.selectbox("Select Player", player_list)
 
 # =====================================================
-# OPTIMIZATION
-# =====================================================
-def optimize_conditions(player_df):
-    best_score = -1
-    best_input_df = None
-
-    input_df = player_df[features]
-    prediction = model.predict(input_df)[0]
-
-    best_score = prediction
-    best_input_df = input_df
-
-    return best_score, best_input_df
-
-# =====================================================
 # MAIN
 # =====================================================
 if selected_player:
@@ -232,12 +276,25 @@ if selected_player:
     player = data[data["Player_Name"] == selected_player]
 
     # ===========================
-    # FETCH LIVE DATA FROM RAPIDAPI
+    # AUTO DETECT IPL MATCH
     # ===========================
+    live_matches = fetch_live_matches()
+    match_id = None
 
-    match_id = 56789  # 🔥 Replace with real match_id
-    api_data = fetch_match_data(match_id)
-    live_runs = extract_player_live_runs(api_data, selected_player)
+    if live_matches and "response" in live_matches:
+        for match in live_matches["response"]["items"]:
+            comp_title = match["competition"]["title"]
+
+            if "Premier League" in comp_title or "IPL" in comp_title:
+                match_id = match["match_id"]
+                break
+
+    api_data = None
+    live_runs = None
+
+    if match_id:
+        api_data = fetch_match_data(match_id)
+        live_runs = extract_player_live_runs(api_data, selected_player)
 
     # ===========================
     # BUILD MODEL INPUT
@@ -247,21 +304,29 @@ if selected_player:
 
     if live_runs is not None:
         latest_full["Runs_Scored"] = live_runs
+        st.success("Live IPL match detected")
+    else:
+        st.info("No live IPL match found. Using last season data.")  
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
 
     model_input = latest_full[features]
-
-    predicted_runs, best_input_df = optimize_conditions(model_input)
+    
+    # -------------------------
+    # PREDICTION
+    # -------------------------
+    predicted_runs = model.predict(model_input)[0]
 
     tree_predictions = np.array([
-        tree.predict(best_input_df)[0]
+        tree.predict(model_input)[0]
         for tree in model.estimators_
     ])
 
     std_dev = np.std(tree_predictions)
     confidence = max(0, 100 - std_dev * 2)
-
+    # ===========================
+    # DASHBOARD
+    # ===========================
     col1, col2 = st.columns([2, 1])
 
     # LEFT PANEL
