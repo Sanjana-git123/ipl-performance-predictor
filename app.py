@@ -310,7 +310,7 @@ if selected_player:
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
 
-    model_input = latest_full[features]
+    model_input = latest_full.reindex(columns=features, fill_value=0)
     
     # -------------------------
     # PREDICTION
