@@ -209,9 +209,8 @@ if selected_player:
     else:
         latest_full = player.sort_values("Year").tail(1)
 
-    latest_full = latest_full[features]
-
     current_runs = latest_full["Runs_Scored"].iloc[0]
+    latest_full = latest_full[features]
 
     predicted_runs, best_input_df = optimize_conditions(latest_full)
 
