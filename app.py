@@ -185,12 +185,21 @@ if selected_player:
     live_data = fetch_player_live_data(selected_player)
 
     if live_data:
-        latest_player = build_live_features(live_data)
+        latest_full = build_live_features(live_data)
     else:
-        latest_player = player.sort_values("Year").tail(1)[features]
+        latest_full = player.sort_values("Year").tail(1)[features]
 
-    current_runs = latest_player["Runs_Scored"].iloc[0]
-    predicted_runs, best_input_df = optimize_conditions(latest_player)
+# Extract current runs safely
+    if "Runs_Scored" in latest_full.columns:
+        current_runs = latest_full["Runs_Scored"].iloc[0]
+    else:
+        current_runs = 0
+
+# Prepare model input separately
+    model_input = latest_full[features]
+
+    predicted_runs, best_input_df = optimize_conditions(model_input)
+    
 
     tree_predictions = np.array([
         tree.predict(best_input_df)[0]
