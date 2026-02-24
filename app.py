@@ -203,37 +203,16 @@ if selected_player:
     # BUILD MODEL INPUT
     # ===========================
 
+    latest_full = player.sort_values("Year").tail(1).copy()
+
     if live_runs is not None:
-        latest_full = player.sort_values("Year").tail(1).copy()
         latest_full["Runs_Scored"] = live_runs
-    else:
-        latest_full = player.sort_values("Year").tail(1)
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
-    latest_full = latest_full[features]
 
-    predicted_runs, best_input_df = optimize_conditions(latest_full)
-
-    tree_predictions = np.array([
-        tree.predict(best_input_df)[0]
-        for tree in model.estimators_
-    ])
-
-    std_dev = np.std(tree_predictions)
-    confidence = max(0, 100 - std_dev * 2)
-    
-
-# Extract current runs safely
-    if "Runs_Scored" in latest_full.columns:
-        current_runs = latest_full["Runs_Scored"].iloc[0]
-    else:
-        current_runs = 0
-
-# Prepare model input separately
     model_input = latest_full[features]
 
     predicted_runs, best_input_df = optimize_conditions(model_input)
-    
 
     tree_predictions = np.array([
         tree.predict(best_input_df)[0]
@@ -257,6 +236,7 @@ if selected_player:
         m3.metric("Confidence", f"{confidence:.1f}%")
 
         importance = model.feature_importances_
+
         feat_imp = pd.DataFrame({
             "Feature": features,
             "Importance": importance
@@ -300,7 +280,7 @@ if selected_player:
         st.progress(int(confidence))
 
         st.markdown('</div>', unsafe_allow_html=True)
-
+    
 # =====================================================
 # CHAT
 # =====================================================
