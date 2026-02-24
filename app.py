@@ -8,6 +8,52 @@ import base64
 import os
 
 # =====================================================
+# RAPID API CONFIG
+# =====================================================
+RAPID_API_KEY = os.getenv("RAPID_API_KEY")
+
+RAPID_API_HOST = "cricket-live-line-advance.p.rapidapi.com"
+
+def fetch_match_data(match_id):
+    if not RAPID_API_KEY:
+        return None
+
+    url = f"https://{RAPID_API_HOST}/match/{match_id}/innings"
+
+    headers = {
+        "X-RapidAPI-Key": RAPID_API_KEY,
+        "X-RapidAPI-Host": RAPID_API_HOST
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        st.error(f"API Error: {response.status_code}")
+        return None
+
+    return response.json()
+
+def extract_player_live_runs(api_json, player_name):
+    if not api_json:
+        return None
+
+    players = api_json["response"].get("players", [])
+    innings = api_json["response"].get("innings", [])
+
+    # Map player_id → name
+    player_map = {p["player_id"]: p["name"] for p in players}
+
+    for inning in innings:
+        for fow in inning.get("fows", []):
+            pid = fow["batsman_id"]
+            name = player_map.get(pid, "")
+
+            if player_name.lower() in name.lower():
+                return fow["runs"]
+
+    return None
+
+# =====================================================
 # PAGE CONFIG
 # =====================================================
 st.set_page_config(
@@ -108,44 +154,7 @@ def load_assets():
 
 model, data, features = load_assets()
 
-# =====================================================
-# API CONFIG (SECURE)
-# =====================================================
-CRIC_API_KEY = os.getenv("CRIC_API_KEY")
 
-def fetch_player_live_data(player_name):
-    if not CRIC_API_KEY:
-        return None
-
-    url = "https://api.cricapi.com/v1/players"
-    params = {
-        "apikey": CRIC_API_KEY,
-        "offset": 0
-    }
-
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
-        return None
-
-    api_data = response.json()
-
-    for player in api_data.get("data", []):
-        if player_name.lower() in player["name"].lower():
-            return player
-
-    return None
-
-
-def build_live_features(api_player_data):
-    features_dict = {}
-    features_dict["Runs_Scored"] = api_player_data.get("runs", 0)
-    features_dict["Year"] = 2026
-
-    for col in features:
-        if col not in features_dict:
-            features_dict[col] = 0
-
-    return pd.DataFrame([features_dict])[features]
 
 # =====================================================
 # HERO
@@ -182,12 +191,38 @@ if selected_player:
 
     player = data[data["Player_Name"] == selected_player]
 
-    live_data = fetch_player_live_data(selected_player)
+    # ===========================
+    # FETCH LIVE DATA FROM RAPIDAPI
+    # ===========================
 
-    if live_data:
-        latest_full = build_live_features(live_data)
+    match_id = 56789  # 🔥 Replace with real match_id
+    api_data = fetch_match_data(match_id)
+    live_runs = extract_player_live_runs(api_data, selected_player)
+
+    # ===========================
+    # BUILD MODEL INPUT
+    # ===========================
+
+    if live_runs is not None:
+        latest_full = player.sort_values("Year").tail(1).copy()
+        latest_full["Runs_Scored"] = live_runs
     else:
-        latest_full = player.sort_values("Year").tail(1)[features]
+        latest_full = player.sort_values("Year").tail(1)
+
+    latest_full = latest_full[features]
+
+    current_runs = latest_full["Runs_Scored"].iloc[0]
+
+    predicted_runs, best_input_df = optimize_conditions(latest_full)
+
+    tree_predictions = np.array([
+        tree.predict(best_input_df)[0]
+        for tree in model.estimators_
+    ])
+
+    std_dev = np.std(tree_predictions)
+    confidence = max(0, 100 - std_dev * 2)
+    
 
 # Extract current runs safely
     if "Runs_Scored" in latest_full.columns:
