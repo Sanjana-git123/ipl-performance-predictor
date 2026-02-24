@@ -74,6 +74,8 @@ bg_image = get_base64("ai_cricket_bg.png")
 st.markdown(
     f"""
     <style>
+
+    /* ========== BACKGROUND IMAGE ========== */
     .stApp {{
         background-image: url("data:image/png;base64,{bg_image}");
         background-size: cover;
@@ -81,17 +83,22 @@ st.markdown(
         background-attachment: fixed;
     }}
 
+    /* Dark overlay (FIXED layering) */
     .stApp::before {{
         content: "";
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 10, 25, 0.88);
-        z-index: -1;
+        inset: 0;
+        background: rgba(5, 15, 30, 0.75);
+        z-index: 0;
     }}
 
+    /* Ensure all content appears above overlay */
+    .stApp > * {{
+        position: relative;
+        z-index: 1;
+    }}
+
+    /* ========== HERO TITLE ========== */
     .hero-title {{
         font-size: 52px;
         font-weight: bold;
@@ -112,7 +119,7 @@ st.markdown(
     .hero-subtitle {{
         font-size: 18px;
         text-align: center;
-        color: #b3faff;
+        color: #d1faff;
         margin-bottom: 10px;
     }}
 
@@ -123,20 +130,53 @@ st.markdown(
         box-shadow: 0 0 15px #00f7ff;
     }}
 
+    /* ========== GLASS CARD (IMPROVED VISIBILITY) ========== */
     .card {{
-        background: rgba(0, 25, 50, 0.65);
-        backdrop-filter: blur(10px);
-        padding: 20px;
+        background: rgba(10, 20, 40, 0.88);
+        backdrop-filter: blur(12px);
+        padding: 22px;
         border-radius: 18px;
-        border: 1px solid rgba(0,255,255,0.4);
-        box-shadow: 0 0 25px rgba(0,255,255,0.3);
+        border: 1px solid rgba(0,255,255,0.35);
+        box-shadow: 0 0 30px rgba(0,255,255,0.25);
+        margin-bottom: 20px;
     }}
 
+    /* ========== DASHBOARD STATS ========== */
+    .dashboard-label {{
+        font-size: 14px;
+        font-weight: 600;
+        color: #cbd5e1;
+        letter-spacing: 0.5px;
+    }}
+
+    .dashboard-value {{
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 6px;
+    }}
+
+    /* ========== AI INSIGHT TEXT ========== */
+    .insight-text {{
+        font-size: 16px;
+        font-weight: 600;
+        color: #ffffff;
+        line-height: 1.6;
+    }}
+
+    /* ========== SELECT DROPDOWN FIX ========== */
     div[data-baseweb="select"] > div {{
-        background-color: rgba(0, 30, 60, 0.8) !important;
+        background-color: rgba(0, 30, 60, 0.9) !important;
         color: white !important;
         border: 1px solid #00f7ff !important;
+        border-radius: 8px !important;
     }}
+
+    /* Fix dropdown text color */
+    div[data-baseweb="select"] span {{
+        color: white !important;
+    }}
+
     </style>
     """,
     unsafe_allow_html=True
