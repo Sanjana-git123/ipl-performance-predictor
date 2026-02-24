@@ -315,10 +315,10 @@ if selected_player:
     # -------------------------
     # PREDICTION
     # -------------------------
-    predicted_runs = model.predict(model_input)[0]
+    predicted_runs = model.predict(model_input.values)[0]
 
     tree_predictions = np.array([
-        tree.predict(model_input)[0]
+        tree.predict(model_input.values)[0]
         for tree in model.estimators_
     ])
 
