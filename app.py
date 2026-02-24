@@ -16,7 +16,6 @@ st_autorefresh(interval=30000, key="ipl_refresh")
 # RAPID API CONFIG
 # =====================================================
 RAPID_API_KEY = os.getenv("RAPID_API_KEY")
-
 RAPID_API_HOST = "cricket-live-line-advance.p.rapidapi.com"
 
 HEADERS = {
@@ -44,6 +43,7 @@ def fetch_live_matches():
 # FETCH MATCH INNINGS DATA (STEP 2)
 # =====================================================
 def fetch_match_data(match_id):
+    
     if not RAPID_API_KEY:
         return None
 
@@ -54,7 +54,7 @@ def fetch_match_data(match_id):
         return None
 
     return response.json()
-
+   
 # =====================================================
 # EXTRACT LIVE PLAYER RUNS
 # =====================================================
