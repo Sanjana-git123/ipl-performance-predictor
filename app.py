@@ -7,117 +7,6 @@ import plotly.graph_objects as go
 import base64
 import os
 
-# RAPID API CONFIG
-# =====================================================
-RAPID_API_KEY = os.getenv("RAPID_API_KEY")
-RAPID_API_HOST = "cricket-live-line-advance.p.rapidapi.com"
-
-HEADERS = {
-    "X-RapidAPI-Key": RAPID_API_KEY,
-    "X-RapidAPI-Host": RAPID_API_HOST
-}
-st.write("API Key Loaded:", RAPID_API_KEY is not None)
-# =====================================================
-# FETCH LIVE MATCHES (STEP 1)
-# =====================================================
-@st.cache_data(ttl=60)
-def fetch_live_matches():
-    if not RAPID_API_KEY:
-        st.error("RAPID_API_KEY not found")
-        return None
-
-    url = (
-        f"https://{RAPID_API_HOST}/matches"
-        "?status=3&per_page=50&paged=1&highlight_live_matches=1"
-    )
-
-    response = requests.get(url, headers=HEADERS)
-
-    st.write("Matches API Status:", response.status_code)
-    
-
-    if response.status_code == 429:
-        st.warning("Daily API limit exceeded. Using last season data.")
-        return None
-
-    if response.status_code != 200:
-        st.error("Matches API failed")
-        st.write(response.text)
-        return None
-
-# =====================================================
-# FETCH MATCH INNINGS DATA (STEP 2)
-# =====================================================
-def fetch_match_data(match_id):
-    if not RAPID_API_KEY:
-        return None
-
-    url = f"https://{RAPID_API_HOST}/matches/{match_id}/statistics"
-    response = requests.get(url, headers=HEADERS)
-    if response.status_code == 429:
-        st.warning("Daily API limit exceeded. Using last season data.")
-        return None
-    if response.status_code != 200:
-        st.warning("Live statistics not available.")
-        return None
-
-    return response.json()
-# =====================================================
-# EXTRACT LIVE PLAYER RUNS
-# =====================================================
-def extract_player_live_runs(api_json, player_name):
-    if not api_json:
-        return None
-
-    players = api_json["response"].get("players", [])
-    innings = api_json["response"].get("innings", [])
-
-    player_map = {p["player_id"]: p["name"] for p in players}
-
-    for inning in innings:
-        for fow in inning.get("fows", []):
-            pid = fow["batsman_id"]
-            name = player_map.get(pid, "")
-
-            if player_name.lower() in name.lower():
-                return fow["runs"]
-
-    return None
-
-# =====================================================
-# WORM GRAPH
-# =====================================================
-def plot_worm_graph(api_data):
-    if not api_data:
-        return
-
-    innings = api_data["response"].get("innings", [])
-
-    fig = go.Figure()
-
-    for inning in innings:
-        worm = inning.get("statistics", {}).get("worm", [])
-        if not worm:
-            continue
-
-        overs = [point["over"] for point in worm]
-        runs = [point["runs"] for point in worm]
-
-        fig.add_trace(go.Scatter(
-            x=overs,
-            y=runs,
-            mode="lines+markers",
-            name=inning.get("name", "Inning")
-        ))
-
-    fig.update_layout(
-        template="plotly_dark",
-        title="Live Worm Graph",
-        xaxis_title="Overs",
-        yaxis_title="Runs"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
 # PAGE CONFIG
@@ -282,34 +171,14 @@ if selected_player:
 
     player = data[data["Player_Name"] == selected_player]
 
-    # ===========================
-    # AUTO DETECT IPL MATCH
-    # ===========================
-    live_runs = None
-    match_id = None
-
-    matches_data = fetch_live_matches()
-
-    if matches_data:
-        items = matches_data.get("response", {}).get("items", [])
-    
-        if items:
-            match_id = items[0].get("match_id")
-    
-    if match_id:
-        api_data = fetch_match_data(match_id)
-        live_runs = extract_player_live_runs(api_data, selected_player)
-    
+   
     # ===========================
     # BUILD MODEL INPUT
     # ===========================
     
     latest_full = player.sort_values("Year").tail(1).copy()
-    if live_runs is not None:
-        latest_full["Runs_Scored"] = live_runs
-        st.success("Live IPL match detected")
-    else:
-        st.info("Using last season data")
+    
+    st.success("AI Model analyzing latest seasonal data")
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
 
