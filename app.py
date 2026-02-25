@@ -22,7 +22,7 @@ HEADERS = {
     "X-RapidAPI-Key": RAPID_API_KEY,
     "X-RapidAPI-Host": RAPID_API_HOST
 }
-
+st.write("API Key Loaded:", RAPID_API_KEY is not None)
 # =====================================================
 # FETCH LIVE MATCHES (STEP 1)
 # =====================================================
@@ -32,14 +32,24 @@ def fetch_live_matches():
         st.error("RAPID_API_KEY not found")
         return None
 
-    url = f"https://{RAPID_API_HOST}/matches"
+    url = (
+        f"https://{RAPID_API_HOST}/matches"
+        "?status=3&per_page=50&paged=1&highlight_live_matches=1"
+    )
+
     response = requests.get(url, headers=HEADERS)
+
+    st.write("Matches API Status:", response.status_code)
+    
+
+    if response.status_code == 429:
+        st.warning("Daily API limit exceeded. Using last season data.")
+        return None
 
     if response.status_code != 200:
         st.error("Matches API failed")
+        st.write(response.text)
         return None
-
-    return response.json()
 
 # =====================================================
 # FETCH MATCH INNINGS DATA (STEP 2)
