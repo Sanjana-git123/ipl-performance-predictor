@@ -164,6 +164,7 @@ st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
 player_list = sorted(data["Player_Name"].unique())
 selected_player = st.selectbox("Select Player", player_list)
 
+
 # =====================================================
 # MAIN
 # =====================================================
