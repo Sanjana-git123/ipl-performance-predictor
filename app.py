@@ -229,10 +229,10 @@ if selected_player:
 
         st.subheader("📊 Performance Dashboard")
 
-        m1, m2, m3 = st.columns(3)
+        m1, m2= st.columns(2)
         m1.metric("Current Runs", int(current_runs))
         m2.metric("Predicted Runs", f"{int(predicted_runs)} ± {int(std_dev)}")
-        m3.metric("Confidence", f"{confidence:.1f}%")
+        
 
         importance = model.feature_importances_
 
