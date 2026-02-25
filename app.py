@@ -163,7 +163,19 @@ st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
 # =====================================================
 player_list = sorted(data["Player_Name"].unique())
 selected_player = st.selectbox("Select Player", player_list)
+# ===========================
+# USER CONDITION SELECTION
+# ===========================
 
+selected_weather = st.selectbox(
+    "Select Weather Condition",
+    ["Sunny", "Cloudy", "Humid"]
+)
+
+selected_pitch = st.selectbox(
+    "Select Pitch Type",
+    ["Flat", "Green", "Dusty"]
+)
 
 # =====================================================
 # MAIN
@@ -210,43 +222,26 @@ if selected_player:
 
     std_dev = np.std(tree_predictions)
     
-    # ===========================
-    # ===========================
-    # WEATHER PREDICTIONS
+        # ===========================
+    # APPLY USER SELECTED CONDITIONS
     # ===========================
 
-    weather_conditions = {
+    weather_adjustments = {
         "Sunny": 15,
         "Cloudy": 10,
         "Humid": 5
     }
 
-    weather_predictions = {}
-
-    for weather, adj in weather_conditions.items():
-        weather_predictions[weather] = predicted_runs + adj
-
-    best_weather = max(weather_predictions, key=weather_predictions.get)
-
-    # ===========================
-    # PITCH PREDICTIONS
-    # ===========================
-
-    pitch_types = {
+    pitch_adjustments = {
         "Flat": 20,
         "Green": 10,
         "Dusty": 15
     }
 
-    pitch_predictions = {}
+    weather_bonus = weather_adjustments[selected_weather]
+    pitch_bonus = pitch_adjustments[selected_pitch]
 
-    for pitch, adj in pitch_types.items():
-        pitch_predictions[pitch] = predicted_runs + adj
-
-    best_pitch = max(pitch_predictions, key=pitch_predictions.get)
-
-    # Best Combined Projection
-    optimal_score = weather_predictions[best_weather] + pitch_types[best_pitch]
+    final_predicted_runs = predicted_runs + weather_bonus + pitch_bonus
     # ===========================
     # DASHBOARD
     # ===========================
@@ -311,20 +306,15 @@ if selected_player:
             narrative = f"{selected_player} may decline by {abs(int(delta))} runs."
 
         st.write(narrative)
-        st.markdown("### 🌦 Predicted Runs by Weather")
+        st.markdown("### 🌦 Selected Match Conditions")
+        st.write(f"Weather: {selected_weather}")
+        st.write(f"Pitch: {selected_pitch}")
 
-        for weather, value in weather_predictions.items():
-            st.write(f"{weather}: {int(value)} runs")
+        st.markdown("### 🎯 Final Predicted Runs")
+        st.write(f"Base Prediction: {int(predicted_runs)} runs")
+        st.write(f"Weather Adjustment: +{weather_bonus}")
+        st.write(f"Pitch Adjustment: +{pitch_bonus}")
 
-        st.markdown("### 🏏 Predicted Runs by Pitch")
+        st.success(f"Final Predicted Runs: {int(final_predicted_runs)}")
 
-        for pitch, value in pitch_predictions.items():
-            st.write(f"{pitch}: {int(value)} runs")
-
-        st.markdown("### ⭐ Optimal Combination")
-
-        st.write(f"Best Weather: {best_weather}")
-        st.write(f"Best Pitch: {best_pitch}")
-        st.write(f"Projected Runs in Optimal Conditions: {int(optimal_score)}")
-    
-# =====================================================
+        st.markdown('</div>', unsafe_allow_html=True)
