@@ -182,7 +182,7 @@ if selected_player:
     st.success("AI Model analyzing latest seasonal data")
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
-
+      
     model_input = latest_full.reindex(columns=features, fill_value=0)
 
     
@@ -190,6 +190,14 @@ if selected_player:
     # PREDICTION
     # -------------------------
     predicted_runs = model.predict(model_input.values)[0]
+    
+    # Now calculate averages (AFTER prediction)
+    
+    current_matches = latest_full["Matches_Played"].iloc[0]
+    if current_matches == 0:
+        current_matches = 1
+    current_avg = current_runs / current_matches
+    predicted_avg = predicted_runs / current_matches 
 
     tree_predictions = np.array([
         tree.predict(model_input.values)[0]
@@ -282,7 +290,6 @@ if selected_player:
             narrative = f"{selected_player} may decline by {abs(int(delta))} runs."
 
         st.write(narrative)
-        st.progress(int(confidence))
         st.markdown("### 🌦 Optimal Match Conditions")
 
         st.write(f"**Best Weather:** {best_weather}")
