@@ -28,16 +28,15 @@ HEADERS = {
 # =====================================================
 @st.cache_data(ttl=60)
 def fetch_live_matches():
-    
     if not RAPID_API_KEY:
+        st.error("RAPID_API_KEY not found")
         return None
 
     url = f"https://{RAPID_API_HOST}/matches"
     response = requests.get(url, headers=HEADERS)
 
-
     if response.status_code != 200:
-        
+        st.error("Matches API failed")
         return None
 
     return response.json()
@@ -49,12 +48,11 @@ def fetch_match_data(match_id):
     if not RAPID_API_KEY:
         return None
 
-    url = f"https://{RAPID_API_HOST}/matches/{match_id}/statistics" 
+    url = f"https://{RAPID_API_HOST}/matches/{match_id}/statistics"
     response = requests.get(url, headers=HEADERS)
 
-
     if response.status_code != 200:
-        st.error("Innings API failed")
+        st.warning("Live statistics not available.")
         return None
 
     return response.json()
@@ -281,47 +279,36 @@ if selected_player:
     # ===========================
     # AUTO DETECT IPL MATCH
     # ===========================
-    matches_json = fetch_live_matches()
+    live_runs = None
     match_id = None
 
-    if matches_json:
-        items = matches_json.get("response", {}).get("items", [])
+    matches_data = fetch_live_matches()
 
-    # For testing: just take first match
+    if matches_data:
+        items = matches_data.get("response", {}).get("items", [])
+    
         if items:
             match_id = items[0].get("match_id")
-   
-    st.write("Selected Match ID:", match_id)
     
-    live_runs = None
     if match_id:
         api_data = fetch_match_data(match_id)
-        
-        if api_data:
-            live_runs = extract_player_live_runs(api_data, selected_player)
-    
+        live_runs = extract_player_live_runs(api_data, selected_player)
     
     # ===========================
     # BUILD MODEL INPUT
     # ===========================
     
     latest_full = player.sort_values("Year").tail(1).copy()
-
-    if live_runs is None:
-        st.warning("⚠️ Live API data not available.")
-    else:
-        st.success("🔥 Live IPL match detected")
+    if live_runs is not None:
         latest_full["Runs_Scored"] = live_runs
-
-    # Ensure Runs_Scored exists
-    if "Runs_Scored" not in latest_full.columns:
-        st.error("Runs_Scored column missing — check dataset merge.")
-        st.stop()
+        st.success("Live IPL match detected")
+    else:
+        st.info("Using last season data")
 
     current_runs = latest_full["Runs_Scored"].iloc[0]
 
-    # Build model input separately
-    model_input = latest_full.reindex(columns=features, fill_value=0) 
+    model_input = latest_full.reindex(columns=features, fill_value=0)
+
     
     # -------------------------
     # PREDICTION
