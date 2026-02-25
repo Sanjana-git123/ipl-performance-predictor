@@ -199,6 +199,26 @@ if selected_player:
     std_dev = np.std(tree_predictions)
     confidence = max(0, 100 - std_dev * 2)
     # ===========================
+# AUTO OPTIMAL CONDITIONS
+# ===========================
+
+# Weather Conditions
+    weather_conditions = ["Sunny", "Cloudy", "Humid"]
+    weather_adjustments = [15, 10, 5]
+
+    weather_scores = [predicted_runs + adj for adj in weather_adjustments]
+    best_weather = weather_conditions[np.argmax(weather_scores)]
+
+# Pitch Conditions
+    pitch_types = ["Flat", "Green", "Dusty"]
+    pitch_adjustments = [20, 10, 15]
+
+    pitch_scores = [predicted_runs + adj for adj in pitch_adjustments]
+    best_pitch = pitch_types[np.argmax(pitch_scores)]
+
+# Calculate boosted predicted score
+    optimal_score = max(weather_scores) + max(pitch_adjustments)
+    # ===========================
     # DASHBOARD
     # ===========================
     col1, col2 = st.columns([2, 1])
@@ -257,7 +277,11 @@ if selected_player:
 
         st.write(narrative)
         st.progress(int(confidence))
+        st.markdown("### 🌦 Optimal Match Conditions")
 
+        st.write(f"**Best Weather:** {best_weather}")
+        st.write(f"**Best Pitch:** {best_pitch}")
+        st.write(f"**Projected Runs in Optimal Conditions:** {int(optimal_score)}")
         st.markdown('</div>', unsafe_allow_html=True)
     
 # =====================================================
