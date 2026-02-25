@@ -60,7 +60,9 @@ def fetch_match_data(match_id):
 
     url = f"https://{RAPID_API_HOST}/matches/{match_id}/statistics"
     response = requests.get(url, headers=HEADERS)
-
+    if response.status_code == 429:
+        st.warning("Daily API limit exceeded. Using last season data.")
+        return None
     if response.status_code != 200:
         st.warning("Live statistics not available.")
         return None
