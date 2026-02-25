@@ -385,22 +385,3 @@ if selected_player:
         st.markdown('</div>', unsafe_allow_html=True)
     
 # =====================================================
-# CHAT
-# =====================================================
-st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
-st.subheader("💬 AI Assistant")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-user_query = st.chat_input("Ask about player form, risk, conditions...")
-
-if user_query:
-    st.session_state.messages.append({"role": "user", "content": user_query})
-    ai_response = "OpenAI integration will activate once API key is added."
-    st.session_state.messages.append({"role": "assistant", "content": ai_response})
-    st.rerun()
