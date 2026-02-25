@@ -265,7 +265,7 @@ model, data, features = load_assets()
 # =====================================================
 # HERO
 # =====================================================
-st.markdown('<div class="hero-title">🏏 AI IPL Performance Intelligence</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">🏏 IPL Performance Predictor</div>', unsafe_allow_html=True)
 st.markdown('<div class="hero-subtitle">Predictive Modeling • Condition Optimization</div>', unsafe_allow_html=True)
 st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
 
