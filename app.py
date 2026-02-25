@@ -123,7 +123,7 @@ def plot_worm_graph(api_data):
 # PAGE CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="AI IPL Performance Intelligence",
+    page_title="IPL Performance Predictor",
     page_icon="🏏",
     layout="wide"
 )
@@ -266,7 +266,7 @@ model, data, features = load_assets()
 # HERO
 # =====================================================
 st.markdown('<div class="hero-title">🏏 AI IPL Performance Intelligence</div>', unsafe_allow_html=True)
-st.markdown('<div class="hero-subtitle">Predictive Modeling • Condition Optimization • Generative AI Insights</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-subtitle">Predictive Modeling • Condition Optimization</div>', unsafe_allow_html=True)
 st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
 
 # =====================================================
