@@ -176,7 +176,7 @@ selected_pitch = st.selectbox(
     "Select Pitch Type",
     ["Flat", "Green", "Dusty"]
 )
-
+predict_button = st.button("🚀 Predict Performance")
 # =====================================================
 # MAIN
 # =====================================================
