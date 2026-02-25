@@ -234,8 +234,10 @@ if selected_player:
         m1.metric("Current Runs", int(current_runs))
         m2.metric("Predicted Runs", f"{int(predicted_runs)} ± {int(std_dev)}")
         m3.metric("Current Avg", f"{current_avg:.2f}")
-        m4.metric("Predicted Avg", f"{predicted_avg:.2f}"
-                  delta=f"{predicted_avg - current_avg:.2f}"
+        m4.metric(
+            "Predicted Avg",
+            f"{predicted_avg:.2f}",
+            delta=f"{predicted_avg - current_avg:.2f}"
         )
 
         importance = model.feature_importances_
