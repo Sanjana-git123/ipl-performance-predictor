@@ -6,13 +6,7 @@ import numpy as np
 import plotly.graph_objects as go
 import base64
 import os
-from streamlit_autorefresh import st_autorefresh
 
-# =====================================================
-# AUTO REFRESH (30 seconds)
-# =====================================================
-st_autorefresh(interval=30000, key="ipl_refresh")
-# =====================================================
 # RAPID API CONFIG
 # =====================================================
 RAPID_API_KEY = os.getenv("RAPID_API_KEY")
