@@ -197,7 +197,7 @@ if selected_player:
     ])
 
     std_dev = np.std(tree_predictions)
-    confidence = max(0, 100 - std_dev * 2)
+    
     # ===========================
 # AUTO OPTIMAL CONDITIONS
 # ===========================
@@ -229,10 +229,14 @@ if selected_player:
 
         st.subheader("📊 Performance Dashboard")
 
-        m1, m2= st.columns(2)
+        m1, m2, m3, m4 = st.columns(4)
+
         m1.metric("Current Runs", int(current_runs))
         m2.metric("Predicted Runs", f"{int(predicted_runs)} ± {int(std_dev)}")
-        
+        m3.metric("Current Avg", f"{current_avg:.2f}")
+        m4.metric("Predicted Avg", f"{predicted_avg:.2f}"
+                  delta=f"{predicted_avg - current_avg:.2f}"
+        )
 
         importance = model.feature_importances_
 
