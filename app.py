@@ -6,6 +6,124 @@ import numpy as np
 import plotly.graph_objects as go
 import base64
 import os
+from streamlit_autorefresh import st_autorefresh
+
+# =====================================================
+# AUTO REFRESH (30 seconds)
+# =====================================================
+st_autorefresh(interval=30000, key="ipl_refresh")
+# =====================================================
+# RAPID API CONFIG
+# =====================================================
+RAPID_API_KEY = os.getenv("RAPID_API_KEY")
+RAPID_API_HOST = "cricket-live-line-advance.p.rapidapi.com"
+
+HEADERS = {
+    "X-RapidAPI-Key": RAPID_API_KEY,
+    "X-RapidAPI-Host": RAPID_API_HOST
+}
+st.write("API Key Loaded:", RAPID_API_KEY is not None)
+# =====================================================
+# FETCH LIVE MATCHES (STEP 1)
+# =====================================================
+@st.cache_data(ttl=60)
+def fetch_live_matches():
+    if not RAPID_API_KEY:
+        st.error("RAPID_API_KEY not found")
+        return None
+
+    url = (
+        f"https://{RAPID_API_HOST}/matches"
+        "?status=3&per_page=50&paged=1&highlight_live_matches=1"
+    )
+
+    response = requests.get(url, headers=HEADERS)
+
+    st.write("Matches API Status:", response.status_code)
+    
+
+    if response.status_code == 429:
+        st.warning("Daily API limit exceeded. Using last season data.")
+        return None
+
+    if response.status_code != 200:
+        st.error("Matches API failed")
+        st.write(response.text)
+        return None
+
+# =====================================================
+# FETCH MATCH INNINGS DATA (STEP 2)
+# =====================================================
+def fetch_match_data(match_id):
+    if not RAPID_API_KEY:
+        return None
+
+    url = f"https://{RAPID_API_HOST}/matches/{match_id}/statistics"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 429:
+        st.warning("Daily API limit exceeded. Using last season data.")
+        return None
+    if response.status_code != 200:
+        st.warning("Live statistics not available.")
+        return None
+
+    return response.json()
+# =====================================================
+# EXTRACT LIVE PLAYER RUNS
+# =====================================================
+def extract_player_live_runs(api_json, player_name):
+    if not api_json:
+        return None
+
+    players = api_json["response"].get("players", [])
+    innings = api_json["response"].get("innings", [])
+
+    player_map = {p["player_id"]: p["name"] for p in players}
+
+    for inning in innings:
+        for fow in inning.get("fows", []):
+            pid = fow["batsman_id"]
+            name = player_map.get(pid, "")
+
+            if player_name.lower() in name.lower():
+                return fow["runs"]
+
+    return None
+
+# =====================================================
+# WORM GRAPH
+# =====================================================
+def plot_worm_graph(api_data):
+    if not api_data:
+        return
+
+    innings = api_data["response"].get("innings", [])
+
+    fig = go.Figure()
+
+    for inning in innings:
+        worm = inning.get("statistics", {}).get("worm", [])
+        if not worm:
+            continue
+
+        overs = [point["over"] for point in worm]
+        runs = [point["runs"] for point in worm]
+
+        fig.add_trace(go.Scatter(
+            x=overs,
+            y=runs,
+            mode="lines+markers",
+            name=inning.get("name", "Inning")
+        ))
+
+    fig.update_layout(
+        template="plotly_dark",
+        title="Live Worm Graph",
+        xaxis_title="Overs",
+        yaxis_title="Runs"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================
 # PAGE CONFIG
@@ -28,6 +146,8 @@ bg_image = get_base64("ai_cricket_bg.png")
 st.markdown(
     f"""
     <style>
+
+    /* ========== BACKGROUND IMAGE ========== */
     .stApp {{
         background-image: url("data:image/png;base64,{bg_image}");
         background-size: cover;
@@ -35,17 +155,22 @@ st.markdown(
         background-attachment: fixed;
     }}
 
+    /* Dark overlay (FIXED layering) */
     .stApp::before {{
         content: "";
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 10, 25, 0.88);
-        z-index: -1;
+        inset: 0;
+        background: rgba(5, 15, 30, 0.75);
+        z-index: 0;
     }}
 
+    /* Ensure all content appears above overlay */
+    .stApp > * {{
+        position: relative;
+        z-index: 1;
+    }}
+
+    /* ========== HERO TITLE ========== */
     .hero-title {{
         font-size: 52px;
         font-weight: bold;
@@ -66,7 +191,7 @@ st.markdown(
     .hero-subtitle {{
         font-size: 18px;
         text-align: center;
-        color: #b3faff;
+        color: #d1faff;
         margin-bottom: 10px;
     }}
 
@@ -77,20 +202,53 @@ st.markdown(
         box-shadow: 0 0 15px #00f7ff;
     }}
 
+    /* ========== GLASS CARD (IMPROVED VISIBILITY) ========== */
     .card {{
-        background: rgba(0, 25, 50, 0.65);
-        backdrop-filter: blur(10px);
-        padding: 20px;
+        background: rgba(10, 20, 40, 0.88);
+        backdrop-filter: blur(12px);
+        padding: 22px;
         border-radius: 18px;
-        border: 1px solid rgba(0,255,255,0.4);
-        box-shadow: 0 0 25px rgba(0,255,255,0.3);
+        border: 1px solid rgba(0,255,255,0.35);
+        box-shadow: 0 0 30px rgba(0,255,255,0.25);
+        margin-bottom: 20px;
     }}
 
+    /* ========== DASHBOARD STATS ========== */
+    .dashboard-label {{
+        font-size: 14px;
+        font-weight: 600;
+        color: #cbd5e1;
+        letter-spacing: 0.5px;
+    }}
+
+    .dashboard-value {{
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 6px;
+    }}
+
+    /* ========== AI INSIGHT TEXT ========== */
+    .insight-text {{
+        font-size: 16px;
+        font-weight: 600;
+        color: #ffffff;
+        line-height: 1.6;
+    }}
+
+    /* ========== SELECT DROPDOWN FIX ========== */
     div[data-baseweb="select"] > div {{
-        background-color: rgba(0, 30, 60, 0.8) !important;
+        background-color: rgba(0, 30, 60, 0.9) !important;
         color: white !important;
         border: 1px solid #00f7ff !important;
+        border-radius: 8px !important;
     }}
+
+    /* Fix dropdown text color */
+    div[data-baseweb="select"] span {{
+        color: white !important;
+    }}
+
     </style>
     """,
     unsafe_allow_html=True
@@ -108,44 +266,7 @@ def load_assets():
 
 model, data, features = load_assets()
 
-# =====================================================
-# API CONFIG (SECURE)
-# =====================================================
-CRIC_API_KEY = os.getenv("CRIC_API_KEY")
 
-def fetch_player_live_data(player_name):
-    if not CRIC_API_KEY:
-        return None
-
-    url = "https://api.cricapi.com/v1/players"
-    params = {
-        "apikey": CRIC_API_KEY,
-        "offset": 0
-    }
-
-    response = requests.get(url, params=params)
-    if response.status_code != 200:
-        return None
-
-    api_data = response.json()
-
-    for player in api_data.get("data", []):
-        if player_name.lower() in player["name"].lower():
-            return player
-
-    return None
-
-
-def build_live_features(api_player_data):
-    features_dict = {}
-    features_dict["Runs_Scored"] = api_player_data.get("runs", 0)
-    features_dict["Year"] = 2026
-
-    for col in features:
-        if col not in features_dict:
-            features_dict[col] = 0
-
-    return pd.DataFrame([features_dict])[features]
 
 # =====================================================
 # HERO
@@ -161,54 +282,61 @@ player_list = sorted(data["Player_Name"].unique())
 selected_player = st.selectbox("Select Player", player_list)
 
 # =====================================================
-# OPTIMIZATION
-# =====================================================
-def optimize_conditions(player_df):
-    best_score = -1
-    best_input_df = None
-
-    input_df = player_df[features]
-    prediction = model.predict(input_df)[0]
-
-    best_score = prediction
-    best_input_df = input_df
-
-    return best_score, best_input_df
-
-# =====================================================
 # MAIN
 # =====================================================
 if selected_player:
 
     player = data[data["Player_Name"] == selected_player]
 
-    live_data = fetch_player_live_data(selected_player)
+    # ===========================
+    # AUTO DETECT IPL MATCH
+    # ===========================
+    live_runs = None
+    match_id = None
 
-    if live_data:
-        latest_full = build_live_features(live_data)
-    else:
-        latest_full = player.sort_values("Year").tail(1)[features]
+    matches_data = fetch_live_matches()
 
-# Extract current runs safely
-    if "Runs_Scored" in latest_full.columns:
-        current_runs = latest_full["Runs_Scored"].iloc[0]
-    else:
-        current_runs = 0
-
-# Prepare model input separately
-    model_input = latest_full[features]
-
-    predicted_runs, best_input_df = optimize_conditions(model_input)
+    if matches_data:
+        items = matches_data.get("response", {}).get("items", [])
     
+        if items:
+            match_id = items[0].get("match_id")
+    
+    if match_id:
+        api_data = fetch_match_data(match_id)
+        live_runs = extract_player_live_runs(api_data, selected_player)
+    
+    # ===========================
+    # BUILD MODEL INPUT
+    # ===========================
+    
+    latest_full = player.sort_values("Year").tail(1).copy()
+    if live_runs is not None:
+        latest_full["Runs_Scored"] = live_runs
+        st.success("Live IPL match detected")
+    else:
+        st.info("Using last season data")
+
+    current_runs = latest_full["Runs_Scored"].iloc[0]
+
+    model_input = latest_full.reindex(columns=features, fill_value=0)
+
+    
+    # -------------------------
+    # PREDICTION
+    # -------------------------
+    predicted_runs = model.predict(model_input.values)[0]
 
     tree_predictions = np.array([
-        tree.predict(best_input_df)[0]
+        tree.predict(model_input.values)[0]
         for tree in model.estimators_
     ])
 
     std_dev = np.std(tree_predictions)
     confidence = max(0, 100 - std_dev * 2)
-
+    # ===========================
+    # DASHBOARD
+    # ===========================
     col1, col2 = st.columns([2, 1])
 
     # LEFT PANEL
@@ -223,6 +351,7 @@ if selected_player:
         m3.metric("Confidence", f"{confidence:.1f}%")
 
         importance = model.feature_importances_
+
         feat_imp = pd.DataFrame({
             "Feature": features,
             "Importance": importance
@@ -266,24 +395,5 @@ if selected_player:
         st.progress(int(confidence))
 
         st.markdown('</div>', unsafe_allow_html=True)
-
+    
 # =====================================================
-# CHAT
-# =====================================================
-st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
-st.subheader("💬 AI Assistant")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-user_query = st.chat_input("Ask about player form, risk, conditions...")
-
-if user_query:
-    st.session_state.messages.append({"role": "user", "content": user_query})
-    ai_response = "OpenAI integration will activate once API key is added."
-    st.session_state.messages.append({"role": "assistant", "content": ai_response})
-    st.rerun()
