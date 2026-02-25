@@ -192,13 +192,17 @@ if selected_player:
     predicted_runs = model.predict(model_input.values)[0]
     
     # Now calculate averages (AFTER prediction)
-    
-    current_matches = latest_full["Matches_Played"].iloc[0]
-    if current_matches == 0:
-        current_matches = 1
-    current_avg = current_runs / current_matches
-    predicted_avg = predicted_runs / current_matches 
 
+    current_matches = latest_full["Matches_Batted"].iloc[0]
+
+# Convert to numeric safely
+    current_matches = pd.to_numeric(current_matches, errors="coerce")
+
+    if pd.isna(current_matches) or current_matches == 0:
+        current_matches = 1
+
+    current_avg = float(current_runs) / float(current_matches)
+    predicted_avg = float(predicted_runs) / float(current_matches)
     tree_predictions = np.array([
         tree.predict(model_input.values)[0]
         for tree in model.estimators_
