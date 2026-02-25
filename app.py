@@ -296,10 +296,10 @@ if selected_player:
     live_runs = None
     if match_id:
         api_data = fetch_match_data(match_id)
-        st.write("Innings JSON:", api_data)
+        
         if api_data:
             live_runs = extract_player_live_runs(api_data, selected_player)
-    st.write("Live Runs Extracted:", live_runs)\
+    
     
     # ===========================
     # BUILD MODEL INPUT
